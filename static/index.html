@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SOS</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: sans-serif;
+        overflow: hidden;
+      }
+
+      .sos-btn {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: #ff0000;
+        border: 4px solid #cc0000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+        animation: pulse 0.8s infinite;
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        transition: transform 0.1s ease;
+      }
+
+      .sos-btn:active {
+        transform: scale(0.95);
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.4);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 50px rgba(255, 0, 0, 1), 0 0 80px rgba(255, 0, 0, 0.6);
+          transform: scale(1.05);
+        }
+        100% {
+          box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.4);
+          transform: scale(1);
+        }
+      }
+
+      .status {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        color: #fff;
+        font-size: 14px;
+        min-height: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status" id="status"></div>
+    <button class="sos-btn" id="sosBtn">SOS</button>
+
+    <script>
+      const sosBtn = document.getElementById("sosBtn");
+      const statusEl = document.getElementById("status");
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      async function sendLocationSMS(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy);
+
+        const message = `Latitude: ${lat}\nLongitude: ${lon}\nAccuracy: ${accuracy} m`;
+
+        const payload = {
+          api_key: "SECRET123",
+          event: "BUTTON_TRIPLE_PRESS",
+          phone: "+916301664543",
+          lat: lat,
+          lon: lon,
+          accuracy: accuracy,
+          message: message
+        };
+
+        const response = await fetch("/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to send SMS");
+        }
+
+        return response.json();
+      }
+
+      sosBtn.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          setStatus("Geolocation not supported");
+          return;
+        }
+
+        setStatus("Getting location...");
+        sosBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              setStatus("Sending SOS...");
+              const result = await sendLocationSMS(position);
+              setStatus("✓ SOS Sent");
+              sosBtn.disabled = false;
+              setTimeout(() => setStatus(""), 3000);
+            } catch (error) {
+              setStatus("Error: " + error.message);
+              sosBtn.disabled = false;
+            }
+          },
+          (error) => {
+            setStatus("Location denied");
+            sosBtn.disabled = false;
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+    </script>
+  </body>
+</html>
