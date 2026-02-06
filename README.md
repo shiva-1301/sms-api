@@ -32,10 +32,11 @@ A minimal Flask API that sends your GPS location via SMS when triggered.
    - In Render dashboard, go to **Environment**
    - Add:
      ```
-     TWILIO_ACCOUNT_SID=ACd60746ac1d6b48b40bccb42bc430c2f3
-     TWILIO_AUTH_TOKEN=0f817362d3f8e99d23eca4f3eca2c803
-     TWILIO_PHONE_NUMBER=+19105656792
+     TWILIO_ACCOUNT_SID=your_account_sid
+     TWILIO_AUTH_TOKEN=your_auth_token
+     TWILIO_PHONE_NUMBER=+1234567890
      ```
+   - Get these from [twilio.com](https://twilio.com)
 
 4. **Done!** Your app will deploy automatically.
 
