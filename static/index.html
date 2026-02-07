@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ff0000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/static/manifest.json" />
     <title>SOS</title>
     <style>
       * {
@@ -86,30 +90,53 @@
         const lon = position.coords.longitude;
         const accuracy = Math.round(position.coords.accuracy);
 
-        const message = `Latitude: ${lat}\nLongitude: ${lon}\nAccuracy: ${accuracy} m`;
+        try {
+          // Step 1: Fetch all emergency contact numbers
+          setStatus("Fetching contacts...");
+          const phonesResponse = await fetch("/phones");
+          const phonesData = await phonesResponse.json();
+          const phones = phonesData.phones;
 
-        const payload = {
-          api_key: "SECRET123",
-          event: "BUTTON_TRIPLE_PRESS",
-          phone: "+916301664543",
-          lat: lat,
-          lon: lon,
-          accuracy: accuracy,
-          message: message
-        };
+          if (!phones || phones.length === 0) {
+            throw new Error("No emergency contacts found");
+          }
 
-        const response = await fetch("/trigger", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+          // Step 2: Send SMS to each number
+          setStatus(`Sending to ${phones.length} contact(s)...`);
+          let successCount = 0;
+          let failCount = 0;
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to send SMS");
+          for (const phone of phones) {
+            try {
+              const payload = {
+                api_key: "SECRET123",
+                event: "BUTTON_TRIPLE_PRESS",
+                phone: phone,
+                lat: lat,
+                lon: lon,
+                accuracy: accuracy
+              };
+
+              const response = await fetch("/trigger", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              });
+
+              if (response.ok) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } catch (err) {
+              failCount++;
+            }
+          }
+
+          return { successCount, failCount, total: phones.length };
+        } catch (error) {
+          throw error;
         }
-
-        return response.json();
       }
 
       sosBtn.addEventListener("click", () => {
@@ -125,8 +152,8 @@
           async (position) => {
             try {
               setStatus("Sending SOS...");
-              const result = await sendLocationSMS(position);
-              setStatus("✓ SOS Sent");
+              await sendLocationSMS(position);
+              setStatus(`✓ Sent to ${result.successCount}/${result.total}`);
               sosBtn.disabled = false;
               setTimeout(() => setStatus(""), 3000);
             } catch (error) {
@@ -145,6 +172,13 @@
           }
         );
       });
+
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js')
+          .then(() => console.log('PWA ready'))
+          .catch(err => console.error('SW registration failed:', err));
+      }
     </script>
   </body>
 </html>

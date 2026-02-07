@@ -12,6 +12,11 @@ API_KEY = "SECRET123"
 # Store last reported location in memory for quick checks
 last_location = None
 
+# Store phone numbers for SOS broadcast
+emergency_contacts = [
+    "+916301664543"
+]
+
 # Twilio credentials from environment variables
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -47,7 +52,8 @@ def trigger_sms():
 
         accuracy_text = f"Accuracy: {accuracy} m" if accuracy else ""
         message_text = (
-            f"Location: {lat}, {lon}\n"
+            f"Latitude: {lat}\n"
+            f"Longitude: {lon}\n"
             f"{accuracy_text}"
         ).strip()
 
@@ -66,6 +72,45 @@ def trigger_sms():
             return jsonify({"error": str(e)}), 500
 
     return jsonify({"action": "NONE"})
+
+@app.route("/phones", methods=["GET"])
+def get_phones():
+    """Get all emergency contact phone numbers"""
+    return jsonify({"phones": emergency_contacts})
+
+@app.route("/phones/add", methods=["POST"])
+def add_phone():
+    """Add a phone number to emergency contacts"""
+    data = request.get_json(silent=True) or {}
+    
+    if data.get("api_key") != API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    phone = data.get("phone")
+    if not phone:
+        return jsonify({"error": "Phone number required"}), 400
+    
+    if phone not in emergency_contacts:
+        emergency_contacts.append(phone)
+    
+    return jsonify({"status": "added", "phones": emergency_contacts})
+
+@app.route("/phones/remove", methods=["POST"])
+def remove_phone():
+    """Remove a phone number from emergency contacts"""
+    data = request.get_json(silent=True) or {}
+    
+    if data.get("api_key") != API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    phone = data.get("phone")
+    if not phone:
+        return jsonify({"error": "Phone number required"}), 400
+    
+    if phone in emergency_contacts:
+        emergency_contacts.remove(phone)
+    
+    return jsonify({"status": "removed", "phones": emergency_contacts})
 
 @app.route("/")
 def home():
