@@ -152,7 +152,7 @@
           async (position) => {
             try {
               setStatus("Sending SOS...");
-              await sendLocationSMS(position);
+              const result = await sendLocationSMS(position);
               setStatus(`✓ Sent to ${result.successCount}/${result.total}`);
               sosBtn.disabled = false;
               setTimeout(() => setStatus(""), 3000);
